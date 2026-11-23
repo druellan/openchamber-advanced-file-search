@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Advanced File Search</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--oc-bg, #fff); color: var(--oc-fg, #111); font-family: var(--oc-font, system-ui); }
+    #root { height: 100%; display: flex; flex-direction: column; padding: 12px; gap: 10px; overflow: hidden; }
+    .toolbar { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: var(--oc-radius, 6px); border: 1px solid var(--oc-border, #ddd); background: var(--oc-elevated, #f5f5f5); flex-shrink: 0; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .label { font-size: 12px; color: var(--oc-muted, #555); white-space: nowrap; }
+    .results { flex: 1 1 auto; overflow: auto; border: 1px solid var(--oc-border, #ddd); border-radius: var(--oc-radius, 6px); background: var(--oc-bg, #fff); display: flex; flex-direction: column; }
+    .results.empty { justify-content: center; align-items: center; color: var(--oc-muted, #777); }
+    .results table { width: 100%; border-collapse: collapse; }
+    .results th { text-align: left; padding: 6px 8px; font-size: 11px; font-weight: 600; color: var(--oc-muted, #555); border-bottom: 1px solid var(--oc-border, #ddd); background: var(--oc-elevated, #f5f5f5); }
+    .results td { padding: 6px 8px; border-bottom: 1px solid var(--oc-border, #eee); vertical-align: top; }
+    .results tr:hover td { background: var(--oc-hover, #f9f9f9); }
+    .file-path { font-weight: 500; color: var(--oc-fg, #111); max-width: 220px; }
+    .file-path > div:first-child { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-path > div:last-child { font-family: var(--oc-mono, monospace); font-size: 11px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .match-line { font-family: var(--oc-mono, monospace); font-size: 11px; color: var(--oc-fg, #111); background: var(--oc-muted-surface, #fffde7); padding: 2px 6px; border-radius: 3px; white-space: pre-wrap; word-break: break-all; max-width: 600px; }
+    .line-num { color: var(--oc-muted, #777); font-family: var(--oc-mono, monospace); font-size: 11px; padding-right: 6px; user-select: none; }
+    .highlight { background: var(--oc-primary, #ffeb3b); color: var(--oc-primary-fg, #000); font-weight: 600; border-radius: 2px; padding: 0 2px; }
+    .match-truncated { color: var(--oc-muted, #777); font-style: italic; }
+    .status { font-size: 11px; color: var(--oc-muted, #555); padding: 4px 8px; background: var(--oc-elevated, #f5f5f5); border-top: 1px solid var(--oc-border, #ddd); border-radius: 0 0 var(--oc-radius, 6px) var(--oc-radius, 6px); flex-shrink: 0; }
+    .search-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .pattern-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .pattern-input { flex: 1 1 180px; min-width: 140px; padding: 6px 8px; border: 1px solid var(--oc-border, #ccc); border-radius: var(--oc-radius, 4px); background: var(--oc-bg, #fff); color: var(--oc-fg, #111); font: inherit; font-family: var(--oc-font, system-ui); }
+    .pattern-input:focus { outline: 2px solid var(--oc-primary, #0066cc); border-color: var(--oc-primary, #0066cc); }
+    .toggle-row { display: flex; gap: 12px; align-items: center; }
+    .icon-btn {
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      color: var(--oc-mono, #555);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--oc-radius, 4px);
+    }
+    .icon-btn:hover {
+      background: var(--oc-hover, #f0f0f0);
+    }
+    .icon-btn:active {
+      background: var(--oc-active, #e0e0e0);
+    }
+    .icon-btn svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="toolbar">
+      <div class="search-row">
+        <div id="searchFieldSlot" style="flex: 1 1 180px; min-width: 140px;"></div>
+        <div id="searchBtnSlot"></div>
+        <div id="stopBtnSlot"></div>
+        <div id="clearBtnSlot"></div>
+      </div>
+      <div class="toggle-row">
+        <div id="regexSlot"></div>
+        <div id="caseSlot"></div>
+      </div>
+      <div class="pattern-row">
+        <span class="label">Include</span>
+        <input type="text" id="pattern" class="pattern-input" placeholder="e.g. *.ts, *.md (leave blank for all)" />
+      </div>
+      <div class="pattern-row">
+        <span class="label">Exclude</span>
+        <input type="text" id="ignore" class="pattern-input" placeholder="e.g. node_modules, .git, *.log, dist/**" />
+      </div>
+      <div class="toggle-row">
+        <div id="gitignoreSlot"></div>
+        <div id="dotfilesSlot"></div>
+      </div>
+    </div>
+    <div class="results empty" id="results">
+      <div>No results yet. Enter a search term and click Search.</div>
+    </div>
+    <div class="status" id="status">Ready</div>
+  </div>
+  <script src="main.js"></script>
+</body>
+</html>

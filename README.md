@@ -14,7 +14,7 @@ An [OpenChamber](https://openchamber.dev) extension that searches the whole open
 - **Ignore dotfiles** - skips files and directories whose name starts with `.`.
 - **Per-row actions**:
   - **Add to context** - appends `[query] found in path:line` to the chat composer, so the agent can open the file where the term appears.
-  - **Copy path** - copies the file path to the clipboard via `host.writeClipboard()`.
+  - **Copy path** - copies the file path to the clipboard.
 
 ## Install
 
@@ -22,22 +22,13 @@ Requires OpenChamber 1.24.0 or newer.
 
 1. Open **Settings → Extensions** in OpenChamber.
 2. Install the folder (or a zip / git URL of this repository).
-3. Approve the `files` capability when prompted.
-
-## Usage
-
-1. Open the panel from the rail (search icon).
-2. Type a query. Leave **Regex** off for literal text.
-3. Optionally narrow the scan with **Include** / **Exclude** patterns, `.gitignore`, and dotfile options.
-4. Press **Enter** or click **Search**.
-5. Use the row icons to send a match to the composer or copy its path.
+3. Approve the `read/write` capability when prompted.
 
 ## Development
 
 ```bash
 pnpm install
-pnpm run build        # esbuild -> panel/main.js (IIFE, minified)
-pnpm exec tsc --noEmit --target ES2020 --moduleResolution bundler --module ESNext --lib ES2020,DOM panel/main.ts
+pnpm run build
 ```
 
 Layout:
@@ -48,5 +39,3 @@ panel/main.ts      TypeScript source
 panel/main.js      Bundled IIFE - what the host loads (commit after build)
 assets/            Screenshot
 ```
-
-The host does not compile TypeScript; `panel/main.js` must be rebuilt and committed after every source change.
